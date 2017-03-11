@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+
+  <schema id="org.gnome.shell.extensions.smartthermostat" path="/org/gnome/shell/extensions/smartthermostat/">
+
+    <key type="i" name="update-time">
+      <default>5</default>
+      <summary>Minutes before next update</summary>
+      <description>This is the minutes before we check data from thermostat again.</description>
+    </key>
+
+    <key type="s" name="position-in-panel">
+      <default>'right'</default>
+      <summary>Position in Panel</summary>
+      <description>Position in Panel ('left', 'center', 'right')</description>
+    </key>
+
+    <key type="s" name="ecobee-pin">
+      <default>''</default>
+      <summary>Ecobee PIN</summary>
+      <description>The user's last ecobee PIN.</description>
+    </key>
+
+    <key type="i" name="ecobee-pin-expires">
+      <default>0</default>
+      <summary>Ecobee PIN Expires</summary>
+      <description>Timestamp when PIN expires.</description>
+    </key>
+
+    <key type="i" name="ecobee-pin-interval">
+      <default>30</default>
+      <summary>Ecobee PIN Interval</summary>
+      <description>How often in seconds to check Ecobee for access token.</description>
+    </key>
+
+    <key type="s" name="ecobee-auth-code">
+      <default>''</default>
+      <summary>Ecobee Authorization Code</summary>
+      <description>The user's authorization code to connect to the Ecobee API.</description>
+    </key>
+
+    <key type="s" name="ecobee-access-token">
+      <default>''</default>
+      <summary>Ecobee Access Token</summary>
+      <description>The user's access token.</description>
+    </key>
+
+    <key type="i" name="ecobee-access-token-expires">
+      <default>0</default>
+      <summary>Ecobee Access Token Expiration</summary>
+      <description>The user's access token expiration time.</description>
+    </key>
+
+    <key type="s" name="ecobee-refresh-token">
+      <default>''</default>
+      <summary>Ecobee Refresh Token</summary>
+      <description>The user's refresh token.</description>
+    </key>
+
+    <key type="i" name="ecobee-refresh-token-expires">
+      <default>0</default>
+      <summary>Ecobee Refresh Token Expiration</summary>
+      <description>The user's refresh token expiration time.</description>
+    </key>
+
+  </schema>
+</schemalist>

@@ -1,0 +1,1 @@
+{"name": "Smart Thermostat", "uuid": "smartthermostat@kevin.sonrapobal.com", "description": "Controls a Smart Thermostat from your shell.  Supports the ecobee3.", "shell-version": ["3.22.2"], "settings-schema": "org.gnome.shell.extensions.smartthermostat"}

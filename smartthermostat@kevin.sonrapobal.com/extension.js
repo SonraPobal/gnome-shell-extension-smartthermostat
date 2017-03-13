@@ -78,7 +78,6 @@ const SmartThermostatButton = new Lang.Class({
     // Get latest values from thermostat and update display
     if (this.ecobeeApi.isConnected()) {
       this._thermostats = this.ecobeeApi.pollThermostats();
-      global.log('polled');
     } else {
       this._thermostats = {};
     }
@@ -93,27 +92,82 @@ const SmartThermostatButton = new Lang.Class({
 
   _appendMenuItems: function() {
     for each (let tstat in this._thermostats) {
-      let item = new PopupMenu.PopupBaseMenuItem();
-      item._label = tstat.name;
-      item._labelActor = new St.Label({text: tstat.name });
-      item.actor.add(item._labelActor, {x_fill: true, expand: true});
-      item._valueLabel = new St.Label({text: Math.round(tstat.actualTemp/10,1).toString()+'°'});
+      let item = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+      let tstat_summary = new St.Bin();
+      item.actor.add_actor(tstat_summary);
+			let box = new St.BoxLayout({ 
+				style_class: 'smartthermostat-details-box' 
+			});
+			tstat_summary.set_child(box);
+
+      let tstatNameContainer = new St.BoxLayout();
+			let tstatName = new St.Label({ text: tstat.name, 
+				style_class: 'smartthermostat-name' });
+      let tstatActual = new St.Label({ text: this.formatTemp(tstat.actualTemp),
+        style_class: 'smartthermostat-temp-actual smartthermostat-temp',  
+        y_align: Clutter.ActorAlign.END });
       if (tstat.heating) {
-        item._valueLabel.set_style('color: rgb(243, 138, 0)');
+        tstatActual.add_style_class_name('smartthermostat-temp-heating');
       }
-      item.actor.add(item._valueLabel);
-      item._desireLabel = new St.Label({text: '(' + Math.round(tstat.desiredTemp/10,1).toString()+'°)'});
-      item.actor.add(item._desireLabel);
+      tstatNameContainer.add_actor(tstatName);
+      tstatNameContainer.add_actor(tstatActual);
+			tstatNameContainer.add_actor(new St.Label( { text: '(' +
+				this.formatTemp(tstat.desiredTemp) + ')',
+				  style_class: 'smartthermostat-temp-desired smartthermostat-temp',
+        	y_align: Clutter.ActorAlign.END }));
+			let bb = new St.BoxLayout({ vertical: true, 
+				style_class: 'system-menu-action smartthermostat-tstat-summary' });
+			bb.add_actor(tstatNameContainer);
+
+			let humidityContainer = new St.BoxLayout();
+			humidityContainer.add_actor(new St.Label({ text: 'Humidity: ' }));
+			let actualHumidity = 
+        new St.Label({ text: tstat.actualHumidity.toString() + '%' });
+			if (tstat.humidifying) {
+			  actualHumidity.add_style_class_name('smartthermostat-misc-on');
+      }
+      humidityContainer.add_actor(actualHumidity);
+			humidityContainer.add_actor(new St.Label({ text: ' (' +
+				tstat.desiredHumidity.toString() + '%)' }));
+			bb.add_actor(humidityContainer);
+
+			let fanStatusContainer = new St.BoxLayout();
+			fanStatusContainer.add_actor(new St.Label({ text: 'Fan: ' }));
+			let fanStatus = new St.Label({ text: 'Off' });
+			if (tstat.fan) {
+				fanStatus.set_text('On');
+				fanStatus.add_style_class_name('smartthermostat-misc-on');
+			}
+			fanStatusContainer.add_actor(fanStatus);
+			bb.add_actor(fanStatusContainer);
+      box.add_actor(bb);
+
+      if (Object.keys(tstat.remoteSensors).length > 1) {
+        let sensorContainer = new St.BoxLayout({ vertical: true,
+          style_class: 'smartthermostat-sensors' });
+        for each (let sensor in tstat.remoteSensors) {
+          let sensorLabel = new St.Label({ text: sensor.name + ': ' +
+            this.formatTemp(sensor.temperature), 
+            style_class: 'smartthermostat-sensor' });
+          if (sensor.occupancy == "true") {
+            sensorLabel.add_style_class_name('smartthermostat-sensor-occupied');
+          }
+          sensorContainer.add_actor(sensorLabel);
+        }
+        box.add_actor(sensorContainer);
+      }
+
       this.menu.addMenuItem(item);
 
       if (tstat.primary) {
-        this._primaryActualTemp.set_text(Math.round(tstat.actualTemp/10,1).toString()+'°');
+        this._primaryActualTemp.set_text(this.formatTemp(tstat.actualTemp));
         if (tstat.heating) {
           this._primaryActualTemp.set_style('color: rgb(243, 138, 0)');
         } else {
           this._primaryActualTemp.set_style('color: inherit');
         }
-        this._primaryDesiredTemp.set_text(' (' + Math.round(tstat.desiredTemp/10,1).toString() + '°)');
+        this._primaryDesiredTemp.set_text(' (' + 
+          this.formatTemp(tstat.desiredTemp) + ')');
       }
     }
 
@@ -127,6 +181,10 @@ const SmartThermostatButton = new Lang.Class({
     });
 
     this.menu.addMenuItem(item);
+  },
+
+  formatTemp: function(val) {
+    return (val/10).toString()+' °F'
   },
 
   get positionInPanel() {

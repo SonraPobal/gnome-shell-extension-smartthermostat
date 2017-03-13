@@ -18,10 +18,10 @@ const EcobeeApi = new GObject.Class({
   _init: function(params) {
     this.parent(params);
 
-		// Create user-agent string from uuid and (if present) the version
+    // Create user-agent string from uuid and (if present) the version
     this.user_agent = Me.metadata.uuid;
     if (Me.metadata.version !== undefined && Me.metadata.version.toString().trim() !== '') {
-    	this.user_agent += '/';
+      this.user_agent += '/';
       this.user_agent += Me.metadata.version.toString();
     }
     // add trailing space, so libsoup adds its own user-agent
@@ -31,21 +31,21 @@ const EcobeeApi = new GObject.Class({
   },
 
   refreshPin: function() {
-		Mainloop.source_remove(this._authWatch);
-	  let response = this.load_json(ECOBEE_API_URL + '/authorize',
-			{ response_type: 'ecobeePin', client_id: ECOBEE_API_KEY, 
-				scope: 'smartWrite' }, 'GET');
-		this.pinExpires = (response.expires_in*60)+Math.round(+new Date()/1000);
-		this.pin = response.ecobeePin;
-		this.pinInterval = response.interval;
-		this.authCode = response.code;
-		this._authWatch = Mainloop.timeout_add_seconds(this.pinInterval,
-			Lang.bind(this, this.getTokens));
+    Mainloop.source_remove(this._authWatch);
+    let response = this.load_json(ECOBEE_API_URL + '/authorize',
+      { response_type: 'ecobeePin', client_id: ECOBEE_API_KEY, 
+        scope: 'smartWrite' }, 'GET');
+    this.pinExpires = (response.expires_in*60)+Math.round(+new Date()/1000);
+    this.pin = response.ecobeePin;
+    this.pinInterval = response.interval;
+    this.authCode = response.code;
+    this._authWatch = Mainloop.timeout_add_seconds(this.pinInterval,
+      Lang.bind(this, this.getTokens));
     return this.pin;
   },
 
-	getTokens: function() {
-		if (!this.pin || !this.authCode) {
+  getTokens: function() {
+    if (!this.pin || !this.authCode) {
       return false;;
     }
     let response = this.load_json(ECOBEE_API_URL + '/token',
@@ -56,14 +56,14 @@ const EcobeeApi = new GObject.Class({
       this.refreshToken = response.refresh_token;
       this.accessTokenExpires = Math.round(+new Date()/1000) + (60*60);
       this.refreshTokenExpires = Math.round(+new Date()/1000) + (60*60*24*365);
-			return false;
+      return false;
     }
-		return true;
-	},
+    return true;
+  },
 
   get pin() {
     if (this.Settings.get_string('ecobee-pin') && 
-			(this.pinExpires < Math.round(+new Date()/1000))) {
+      (this.pinExpires < Math.round(+new Date()/1000))) {
       this.Settings.set_string('ecobee-pin', '');
     }
     return this.Settings.get_string('ecobee-pin');
@@ -103,7 +103,7 @@ const EcobeeApi = new GObject.Class({
 
   get refreshToken() {
     if (this.Settings.get_string('ecobee-refresh-token') && 
-			(this.refreshTokenExpires < Math.round(+new Date()/1000))) {
+      (this.refreshTokenExpires < Math.round(+new Date()/1000))) {
       this.Settings.set_string('ecobee-refresh-token', '');
     }
     return this.Settings.get_string('ecobee-refresh-token');
@@ -123,19 +123,19 @@ const EcobeeApi = new GObject.Class({
 
   get accessToken() {
     if (this.refreshToken &&
-			(this.accessTokenExpires < Math.round(+new Date()/1000))) {
+      (this.accessTokenExpires < Math.round(+new Date()/1000))) {
       this.Settings.set_string('ecobee-access-token', '');
-		  let response = this.load_json(ECOBEE_API_URL + '/token',
-  		  { grant_type: 'refresh_token', 'code': this.refreshToken,
+      let response = this.load_json(ECOBEE_API_URL + '/token',
+        { grant_type: 'refresh_token', 'code': this.refreshToken,
           client_id: ECOBEE_API_KEY }, 'POST');
-			if (response.access_token) {
-				this.accessToken = response.access_token;
-				this.accessTokenExpires = Math.round(+new Date()/1000) + (60*60);
+      if (response.access_token) {
+        this.accessToken = response.access_token;
+        this.accessTokenExpires = Math.round(+new Date()/1000) + (60*60);
         this.refreshToken = response.refresh_token;
         this.refreshTokenExpires = Math.round(+new Date()/1000) + (60*60*24*365);
-			} else {
-				this.accessToken = '';
-			}
+      } else {
+        this.accessToken = '';
+      }
     }
     return this.Settings.get_string('ecobee-access-token');
   },
@@ -152,50 +152,125 @@ const EcobeeApi = new GObject.Class({
     this.Settings.set_int('ecobee-access-token-expires', v);
   },
 
-	isConnected: function() {
-		if (this.accessToken) {
-			return true;
-		}
-		return false;
-	},
+  isConnected: function() {
+    if (this.accessToken) {
+      return true;
+    }
+    return false;
+  },
 
-	pollThermostats: function() {
-		//if (!this._thermostats) {
-			this.refreshThermostats();
-    //}
-		return this._thermostats;
-	},
-
-	refreshThermostats: function() {
-		let response = this.load_json(ECOBEE_API_URL + 
-			'/1/thermostat', {json: '\{"selection":\{"includeAlerts":"true","selectionType":"registered","selectionMatch":"","includeEvents":"true","includeSettings":"true","includeRuntime":"true","includeEquipmentStatus":"true"\}\}'}, 'GET', { 'Content-Type': 'text/json;charset=UTF-8', 'Authorization': 'Bearer ' + this.accessToken});
-		this._thermostats = {};
-		for each (let tstat in response.thermostatList) {
-			this._thermostats[tstat.identifier] = {
-				name: tstat.name,
-        primary: true,
-			  actualTemp: tstat.runtime.actualTemperature,
-        desiredTemp: tstat.runtime.desiredHeat,
-        mode: tstat.settings.hvacMode,
-        heating: false,
-        cooling: false,
-        humidifying: false
-			}
-      let equipStatus = tstat.equipmentStatus.split(',');
-      for each (let statusItem in equipStatus) {
-        switch (statusItem) {
-          case 'heatPump':
-          case 'heatPump2':
-          case 'heatPump3':
-          case 'auxHeat1':
-          case 'auxHeat2':
-          case 'auxHeat3':
-            this._thermostats[tstat.identifier].heating = true;
-            break;
+  pollThermostats: function() {
+    if (!this._thermostats) {
+      this._thermostats = {};
+      this.refreshThermostats();
+    } else {
+      let response = this.load_json(ECOBEE_API_URL +
+        '/1/thermostatSummary', {json: '\{"selection":\{"selectionType":"registered","selectionMatch":""\}\}'}, 'GET', { 'Content-Type': 'text/json;charset=UTF-8', 'Authorization': 'Bearer ' + this.accessToken});
+      for each (let tstatus in response.revisionList) {
+        let runtime, settings;
+        runtime = settings = false;
+        tstatus = tstatus.split(':');
+        if (typeof this._thermostats[tstatus[0]] == 'undefined') {
+          this.refreshThermostats([tstatus[0]]);
+          continue;
+        }
+        if (this._thermostats[tstatus[0]].runtimeRev != tstatus[5]) {
+          runtime = true;
+        }
+        if (this._thermostats[tstatus[0]].thermostatRev != tstatus[3]) {
+          settings = true;
+        }
+        if (settings || runtime) {
+          this.refreshThermostats([tstatus[0]], runtime, settings);
         }
       }
-		}
-	},
+    }
+    return this._thermostats;
+  },
+
+  refreshThermostats: function(tstat_ids = [], runtime = true, 
+    settings = true) {
+    let request = {
+      selection: {
+        'includeEquipmentStatus': true
+      }
+    };
+    if (tstat_ids.length > 0) {
+      request.selection.selectionType = 'thermostats';
+      request.selection.selectionMatch = tstat_ids.join(",");
+    } else {
+      request.selection.selectionType = 'registered';
+      request.selection.selectionMatch = '';
+    }
+    if (runtime) {
+      request.selection.includeRuntime = true;
+      request.selection.includeSensors = true;
+    }
+    if (settings) {
+      request.selection.includeSettings = true;
+    }
+    let response = this.load_json(ECOBEE_API_URL + 
+      '/1/thermostat', {json: JSON.stringify(request)}, 'GET', { 'Content-Type': 'text/json;charset=UTF-8', 'Authorization': 'Bearer ' + this.accessToken});
+    for each (let tstat in response.thermostatList) {
+      if (typeof this._thermostats[tstat.identifier] == 'undefined') {
+        this._thermostats[tstat.identifier] = {
+          name: tstat.name,
+          primary: true,
+          heating: false,
+          cooling: false,
+          humidifying: false,
+          remoteSensors: {}
+        }
+      }
+      this._thermostats[tstat.identifier].thermostatRev = tstat.thermostatRev;
+      if (runtime) {
+        this._thermostats[tstat.identifier].runtimeRev = 
+          tstat.runtime.runtimeRev;
+        this._thermostats[tstat.identifier].actualTemp =
+          tstat.runtime.actualTemperature;
+        this._thermostats[tstat.identifier].desiredTemp =
+          tstat.runtime.desiredHeat;
+        for each (let sensor in tstat.remoteSensors) {
+          if (typeof this._thermostats[tstat.identifier].remoteSensors[sensor.id] == 'undefined') {
+            this._thermostats[tstat.identifier].remoteSensors[sensor.id] = {
+              name: sensor.name
+            };
+            for each (let data in sensor.capability) {
+              this._thermostats[tstat.identifier].remoteSensors[sensor.id][data.type] = data.value;
+            }
+          }
+        }
+      }
+      if (settings) {
+        this._thermostats[tstat.identifier].mode = tstat.settings.hvacMode;
+      }
+      this.updateEquipmentStatus(tstat.identifier, tstat.equipmentStatus);
+    }
+  },
+
+  updateEquipmentStatus: function(tstat_id, equip_status) {
+    this._thermostats[tstat_id].heating =
+    this._thermostats[tstat_id].cooling =
+    this._thermostats[tstat_id].fan =
+    this._thermostats[tstat_id].humidifying = false;
+    let equipStatus = equip_status.split(',');
+    for each (let statusItem in equipStatus) {
+      switch (statusItem) {
+        case 'heatPump':
+        case 'heatPump2':
+        case 'heatPump3':
+        case 'auxHeat1':
+        case 'auxHeat2':
+        case 'auxHeat3':
+          this._thermostats[tstat_id].heating = true;
+          break;
+      }
+    }
+  },
+
+  destroy: function() {
+    Mainloop.source_remove(this._authWatch);
+  },  
 
   loadConfig: function() {
     this.Settings = Convenience.getSettings('org.gnome.shell.extensions.smartthermostat');
@@ -207,19 +282,14 @@ const EcobeeApi = new GObject.Class({
       _httpSession.user_agent = this.user_agent;
     } else {
       // abort previous requests.
-  	  _httpSession.abort();
-	  }
-		let message = Soup.form_request_new_from_hash(method, url, params);
-		/*if (this.accessToken && (this.accessToken != 'refreshing')) {
-			message.request_headers.append('Content-Type', 'text/json;charset=UTF-8');;
-			message.request_headers.append('Authorization', 
-				'Bearer ' + this.accessToken);
-		}*/
+      _httpSession.abort();
+    }
+    let message = Soup.form_request_new_from_hash(method, url, params);
     for (var header in headers) {
       message.request_headers.append(header, headers[header]);
     }
-		_httpSession.send_message(message);
-		return JSON.parse(message.response_body.data);
+    _httpSession.send_message(message);
+    return JSON.parse(message.response_body.data);
   }
 });
 

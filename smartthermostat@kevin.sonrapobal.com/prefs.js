@@ -34,9 +34,15 @@ const SmartThermostatPrefsWidget = new GObject.Class({
     let i = 0;
 
     this.attach(new Gtk.Label({ label: 'Poll Thermostat Every (min)', halign : Gtk.Align.END}), 0, i, 1, 1);
-    let updateTime = Gtk.SpinButton.new_with_range (1, 60, 1);
+    let updateTime = Gtk.SpinButton.new_with_range (3, 60, 1);
     this.attach(updateTime, 1, i++, 1, 1);
     this._settings.bind('update-time', updateTime, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+    this._addComboBox({
+      items : {centigrade : "\u00b0C", fahrenheit : "\u00b0F"},
+      key: 'unit', y : i++, x : 0,
+      label: 'Temperature Unit'
+    });
 
     this._addComboBox({
       items : {left : 'Left', center : 'Center', right : 'Right'},

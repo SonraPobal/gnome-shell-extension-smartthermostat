@@ -9,6 +9,12 @@
       <description>This is the minutes before we check data from thermostat again.</description>
     </key>
 
+    <key type="s" name="unit">
+      <default>'farenheit'</default>
+      <summary>Unit</summary>
+      <description>The unit ('centigrade' or 'fahrenheit') the extension should display the temperature in</description>
+    </key>
+
     <key type="s" name="position-in-panel">
       <default>'right'</default>
       <summary>Position in Panel</summary>

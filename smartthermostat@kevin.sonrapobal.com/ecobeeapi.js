@@ -204,6 +204,7 @@ const EcobeeApi = new GObject.Class({
     }
     if (runtime) {
       request.selection.includeRuntime = true;
+      request.selection.includeExtendedRuntime = true;
       request.selection.includeSensors = true;
     }
     if (settings) {
@@ -225,22 +226,31 @@ const EcobeeApi = new GObject.Class({
       this._thermostats[tstat.identifier].thermostatRev = tstat.thermostatRev;
       if (settings) {
         this._thermostats[tstat.identifier].mode = tstat.settings.hvacMode;
-				this._thermostats[tstat.identifier].forcedAir = 
-					tstat.settings.hasForcedAir;
-				this._thermostats[tstat.identifier].fanControl =
-					tstat.settings.fanControlRequired;
+        this._thermostats[tstat.identifier].forcedAir = 
+          tstat.settings.hasForcedAir;
+        this._thermostats[tstat.identifier].fanControl =
+          tstat.settings.fanControlRequired;
+        this._thermostats[tstat.identifier].humidifierMode =
+          tstat.settings.humidifierMode;
       }
       if (runtime) {
         this._thermostats[tstat.identifier].runtimeRev = 
           tstat.runtime.runtimeRev;
+        this._thermostats[tstat.identifier].fanMode =
+          tstat.runtime.desiredFanMode;
         this._thermostats[tstat.identifier].actualTemp =
           tstat.runtime.actualTemperature;
         this._thermostats[tstat.identifier].desiredTemp =
           tstat.runtime.desiredHeat;
         this._thermostats[tstat.identifier].actualHumidity =
           tstat.runtime.actualHumidity;
-        this._thermostats[tstat.identifier].desiredHumidity =
-          tstat.runtime.desiredHumidity;
+        if (this._thermostats[tstat.identifier].humidifierMode == 'auto') {
+          this._thermostats[tstat.identifier].desiredHumidity =
+            tstat.extendedRuntime.desiredHumidity[0];
+        } else {
+          this._thermostats[tstat.identifier].desiredHumidity =
+            tstat.runtime.desiredHumidity;
+        }
         for each (let sensor in tstat.remoteSensors) {
           if (typeof this._thermostats[tstat.identifier].remoteSensors[sensor.id] == 'undefined') {
             this._thermostats[tstat.identifier].remoteSensors[sensor.id] = {
@@ -271,10 +281,10 @@ const EcobeeApi = new GObject.Class({
         case 'auxHeat2':
         case 'auxHeat3':
           this._thermostats[tstat_id].heating = true;
-					if ((this._thermostats[tstat_id].forcedAir == "true") &&
-						(this._thermostats[tstat_id].fanControl != "true")) {
-						this._thermostats[tstat_id].fan = true;
-					}
+          if (this._thermostats[tstat_id].forcedAir &&
+            !this._thermostats[tstat_id].fanControl) {
+            this._thermostats[tstat_id].fan = true;
+          }
           break;
         case 'compCool1':
         case 'compCool2':

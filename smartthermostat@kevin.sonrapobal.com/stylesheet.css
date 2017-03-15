@@ -9,7 +9,7 @@
   font-size: 1.8em;
   padding-right: 0.25em;
 }
-.smartthermostat-misc-on { color: green; }
+.smartthermostat-misc-on { color: rgb(50, 205, 50); }
 .smartthermostat-temp { padding-left: 0.25em; font-size: 1.4em; }
 .smartthermostat-temp-heating { color: rgb(243, 138, 0); }
 .smartthermostat-sensors { padding-left: 3em; }

@@ -40,6 +40,7 @@ const SmartThermostatButton = new Lang.Class({
 
     this._settingChangedSignals = [];
     this._addSettingChangedSignal('update-time', Lang.bind(this, this._updateTimeChanged));
+    this._addSettingChangedSignal('unit', Lang.bind(this, this._updateDisplay));
 
     this.connect('destroy', Lang.bind(this, this._onDestroy));
 
@@ -91,18 +92,23 @@ const SmartThermostatButton = new Lang.Class({
   },
 
   _appendMenuItems: function() {
+    if (!Object.keys(this._thermostats).length) {
+      let item = new PopupMenu.PopupBaseMenuItem({ reactive: false });
+      item.actor.add_actor(new St.Label({text: 'No thermostats available.  Please check your settings.'}));
+      this.menu.addMenuItem(item);
+    }
     for each (let tstat in this._thermostats) {
       let item = new PopupMenu.PopupBaseMenuItem({ reactive: false });
       let tstat_summary = new St.Bin();
       item.actor.add_actor(tstat_summary);
-			let box = new St.BoxLayout({ 
-				style_class: 'smartthermostat-details-box' 
-			});
-			tstat_summary.set_child(box);
+      let box = new St.BoxLayout({ 
+        style_class: 'smartthermostat-details-box' 
+      });
+      tstat_summary.set_child(box);
 
       let tstatNameContainer = new St.BoxLayout();
-			let tstatName = new St.Label({ text: tstat.name, 
-				style_class: 'smartthermostat-name' });
+      let tstatName = new St.Label({ text: tstat.name, 
+        style_class: 'smartthermostat-name' });
       let tstatActual = new St.Label({ text: this.formatTemp(tstat.actualTemp),
         style_class: 'smartthermostat-temp-actual smartthermostat-temp',  
         y_align: Clutter.ActorAlign.END });
@@ -111,35 +117,37 @@ const SmartThermostatButton = new Lang.Class({
       }
       tstatNameContainer.add_actor(tstatName);
       tstatNameContainer.add_actor(tstatActual);
-			tstatNameContainer.add_actor(new St.Label( { text: '(' +
-				this.formatTemp(tstat.desiredTemp) + ')',
-				  style_class: 'smartthermostat-temp-desired smartthermostat-temp',
-        	y_align: Clutter.ActorAlign.END }));
-			let bb = new St.BoxLayout({ vertical: true, 
-				style_class: 'system-menu-action smartthermostat-tstat-summary' });
-			bb.add_actor(tstatNameContainer);
+      tstatNameContainer.add_actor(new St.Label( { text: '(' +
+        this.formatTemp(tstat.desiredTemp) + ')',
+          style_class: 'smartthermostat-temp-desired smartthermostat-temp',
+          y_align: Clutter.ActorAlign.END }));
+      let bb = new St.BoxLayout({ vertical: true, 
+        style_class: 'system-menu-action smartthermostat-tstat-summary' });
+      bb.add_actor(tstatNameContainer);
 
-			let humidityContainer = new St.BoxLayout();
-			humidityContainer.add_actor(new St.Label({ text: 'Humidity: ' }));
-			let actualHumidity = 
+      let humidityContainer = new St.BoxLayout();
+      humidityContainer.add_actor(new St.Label({ text: 'Humidity: ' }));
+      let actualHumidity = 
         new St.Label({ text: tstat.actualHumidity.toString() + '%' });
-			if (tstat.humidifying) {
-			  actualHumidity.add_style_class_name('smartthermostat-misc-on');
+      if (tstat.humidifying) {
+        actualHumidity.add_style_class_name('smartthermostat-misc-on');
       }
       humidityContainer.add_actor(actualHumidity);
-			humidityContainer.add_actor(new St.Label({ text: ' (' +
-				tstat.desiredHumidity.toString() + '%)' }));
-			bb.add_actor(humidityContainer);
+      humidityContainer.add_actor(new St.Label({ text: ' (' +
+        tstat.desiredHumidity.toString() + '%)' }));
+      bb.add_actor(humidityContainer);
 
-			let fanStatusContainer = new St.BoxLayout();
-			fanStatusContainer.add_actor(new St.Label({ text: 'Fan: ' }));
-			let fanStatus = new St.Label({ text: 'Off' });
-			if (tstat.fan) {
-				fanStatus.set_text('On');
-				fanStatus.add_style_class_name('smartthermostat-misc-on');
-			}
-			fanStatusContainer.add_actor(fanStatus);
-			bb.add_actor(fanStatusContainer);
+      let fanStatusContainer = new St.BoxLayout();
+      fanStatusContainer.add_actor(new St.Label({ text: 'Fan: ' }));
+      let fanStatus = new St.Label({ text: 'Off' });
+      if (tstat.fan) {
+        fanStatus.set_text('On');
+        fanStatus.add_style_class_name('smartthermostat-misc-on');
+      }
+      fanStatusContainer.add_actor(fanStatus);
+      fanStatusContainer.add_actor(new St.Label({ text: ' (' + 
+        tstat.fanMode + ')' }));
+      bb.add_actor(fanStatusContainer);
       box.add_actor(bb);
 
       if (Object.keys(tstat.remoteSensors).length > 1) {
@@ -184,7 +192,10 @@ const SmartThermostatButton = new Lang.Class({
   },
 
   formatTemp: function(val) {
-    return (val/10).toString()+' °F'
+    if (this._settings.get_string('unit') == 'fahrenheit') {
+      return (val/10).toString()+' °F';
+    }
+    return (Math.round((((val-320)*5)/90)*10)/10).toString()+' °C';
   },
 
   get positionInPanel() {
